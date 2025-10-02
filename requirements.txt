@@ -1,0 +1,8 @@
+streamlit
+scanpy
+matplotlib
+seaborn
+pandas
+python-igraph
+leidenalg
+celltypist
