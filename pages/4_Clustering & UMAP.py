@@ -1,6 +1,7 @@
 import streamlit as st
 import scanpy as sc
 import matplotlib.pyplot as plt
+import io
 
 st.title("🔗 Clustering & Non-linear Dimensional Reduction (UMAP)")
 
@@ -18,7 +19,7 @@ It is recommended to use the same `n_pcs` as chosen in the previous step for clu
 
 # --- Check if adata exists from Step 4 ---
 if "adata" not in st.session_state:
-    st.error("No AnnData object found. Please complete Step 4 (PCA) first.")
+    st.error("No AnnData object found. Please complete **PCA** first.")
     st.stop()
 
 adata = st.session_state["adata"]
@@ -134,6 +135,6 @@ if st.session_state.get("clustering_done", False):
     </style>
     """, unsafe_allow_html=True)
 
-    spacer, right = st.columns([0.5, 0.2], gap="small")
+    spacer, right = st.columns([1.0, 0.2], gap="small")
     with right:
         st.page_link("pages/5_DEGs.py", label="➡️ Next: DEGs")

@@ -24,7 +24,7 @@ The preprocessing workflow must be performed in order:
 
 # --- Check if adata exists from Step 1 ---
 if "adata" not in st.session_state:
-    st.error("No AnnData object found. Please load data in Step 1 first.")
+    st.error("No AnnData object found. Please **Load data** first.")
     st.stop()
 
 adata = st.session_state["adata"]
@@ -166,6 +166,7 @@ if submodule == "QC and Filtering":
 
         st.session_state["qc_done"] = True
         st.session_state["normalized_done"] = False
+        st.session_state["hvg_done"] = False
         st.session_state["scaled_done"] = False
 
         # Save filtered AnnData
@@ -232,59 +233,111 @@ elif submodule == "HVG Selection":
 
     n_top_genes = st.number_input("Number of variable genes", min_value=500, value=2000, step=500)
 
-    # Show button only if HVG not already computed
-    if not st.session_state.get("hvg_done", False):
-        if st.button("Identify HVGs"):
-            sc.pp.highly_variable_genes(
-                adata, n_top_genes=n_top_genes,
-                min_mean=0.0125, max_mean=3, min_disp=0.5, flavor="seurat"
-            )
-            st.session_state["adata"] = adata
-            st.session_state["hvg_done"] = True
-            st.success(f"✅ Identified top {n_top_genes} highly variable genes.")
-            save_and_download(adata, "hvg_data.h5ad", "Download HVG data (.h5ad)")
+    # # Show button only if HVG not already computed
+    # if not st.session_state.get("hvg_done", False):
+    #     if st.button("Identify HVGs"):
+    #         sc.pp.highly_variable_genes(
+    #             adata, n_top_genes=n_top_genes,
+    #             min_mean=0.0125, max_mean=3, min_disp=0.5, flavor="seurat"
+    #         )
+    #         st.session_state["adata"] = adata
+    #         st.session_state["hvg_done"] = True
+    #         st.success(f"✅ Identified top {n_top_genes} highly variable genes.")
+    #         save_and_download(adata, "hvg_data.h5ad", "Download HVG data (.h5ad)")
 
-            wait_msg = st.empty()
-            wait_msg.info("⏳ Plotting HVG selection... please wait, this may take a few seconds.")
+    #         wait_msg = st.empty()
+    #         wait_msg.info("⏳ Plotting HVG selection... please wait, this may take a few seconds.")
 
-            # --- Plots ---
-            fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-            axes[0].scatter(
-                adata.var["means"][~adata.var["highly_variable"]],
-                adata.var["dispersions_norm"][~adata.var["highly_variable"]],
-                c="black", s=5, label="Other genes"
-            )
-            axes[0].scatter(
-                adata.var["means"][adata.var["highly_variable"]],
-                adata.var["dispersions_norm"][adata.var["highly_variable"]],
-                c="red", s=5, label="Highly variable genes"
-            )
-            axes[0].set_title("Normalized dispersion"); axes[0].legend(frameon=False)
+    #         # --- Plots ---
+    #         fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    #         axes[0].scatter(
+    #             adata.var["means"][~adata.var["highly_variable"]],
+    #             adata.var["dispersions_norm"][~adata.var["highly_variable"]],
+    #             c="black", s=5, label="Other genes"
+    #         )
+    #         axes[0].scatter(
+    #             adata.var["means"][adata.var["highly_variable"]],
+    #             adata.var["dispersions_norm"][adata.var["highly_variable"]],
+    #             c="red", s=5, label="Highly variable genes"
+    #         )
+    #         axes[0].set_title("Normalized dispersion"); axes[0].legend(frameon=False)
 
-            axes[1].scatter(
-                adata.var["means"][~adata.var["highly_variable"]],
-                adata.var["dispersions"][~adata.var["highly_variable"]],
-                c="black", s=5
-            )
-            axes[1].scatter(
-                adata.var["means"][adata.var["highly_variable"]],
-                adata.var["dispersions"][adata.var["highly_variable"]],
-                c="red", s=5
-            )
-            axes[1].set_title("Raw dispersion")
+    #         axes[1].scatter(
+    #             adata.var["means"][~adata.var["highly_variable"]],
+    #             adata.var["dispersions"][~adata.var["highly_variable"]],
+    #             c="black", s=5
+    #         )
+    #         axes[1].scatter(
+    #             adata.var["means"][adata.var["highly_variable"]],
+    #             adata.var["dispersions"][adata.var["highly_variable"]],
+    #             c="red", s=5
+    #         )
+    #         axes[1].set_title("Raw dispersion")
 
-            st.pyplot(fig)
+    #         st.pyplot(fig)
 
-            # ✅ Clear wait message after plots are shown
-            wait_msg.empty()
+    #         # ✅ Clear wait message after plots are shown
+    #         wait_msg.empty()
 
-            # 👉 Reminder
-            st.warning("👉 Continue to **Scaling** step in the sidebar.")
+    #         # 👉 Reminder
+    #         st.warning("👉 Continue to **Scaling** step in the sidebar.")
 
-    else:
-        # Already done → show confirmation instead of button
-        st.success("✅ HVG selection already performed.")
+    # else:
+    #     # Already done → show confirmation instead of button
+    #     st.success("✅ HVG selection already performed.")
 
+ # Show button only if HVG not already computed
+    # if not st.session_state.get("hvg_done", False):
+    if st.button("Identify HVGs"):
+        sc.pp.highly_variable_genes(
+            adata, n_top_genes=n_top_genes,
+            min_mean=0.0125, max_mean=3, min_disp=0.5, flavor="seurat"
+        )
+        st.session_state["adata"] = adata
+        st.session_state["hvg_done"] = True
+        st.success(f"✅ Identified top {n_top_genes} highly variable genes.")
+        save_and_download(adata, "hvg_data.h5ad", "Download HVG data (.h5ad)")
+
+        wait_msg = st.empty()
+        wait_msg.info("⏳ Plotting HVG selection... please wait, this may take a few seconds.")
+
+        # --- Plots ---
+        fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+        axes[0].scatter(
+            adata.var["means"][~adata.var["highly_variable"]],
+            adata.var["dispersions_norm"][~adata.var["highly_variable"]],
+            c="black", s=5, label="Other genes"
+        )
+        axes[0].scatter(
+            adata.var["means"][adata.var["highly_variable"]],
+            adata.var["dispersions_norm"][adata.var["highly_variable"]],
+            c="red", s=5, label="Highly variable genes"
+        )
+        axes[0].set_title("Normalized dispersion"); axes[0].legend(frameon=False)
+
+        axes[1].scatter(
+            adata.var["means"][~adata.var["highly_variable"]],
+            adata.var["dispersions"][~adata.var["highly_variable"]],
+            c="black", s=5
+        )
+        axes[1].scatter(
+            adata.var["means"][adata.var["highly_variable"]],
+            adata.var["dispersions"][adata.var["highly_variable"]],
+            c="red", s=5
+        )
+        axes[1].set_title("Raw dispersion")
+
+        st.pyplot(fig)
+
+        # ✅ Clear wait message after plots are shown
+        wait_msg.empty()
+
+        # 👉 Reminder
+        st.warning("👉 Continue to **Scaling** step in the sidebar.")
+
+    # else:
+    #     # Already done → show confirmation instead of button
+    #     st.success("✅ HVG selection already performed.")
 
 # =========================================================
 # --- Scaling ---

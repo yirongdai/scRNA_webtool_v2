@@ -20,7 +20,7 @@ The workflow includes:
 
 # --- Check if adata exists ---
 if "adata" not in st.session_state:
-    st.error("No AnnData object found. Please complete preprocessing first.")
+    st.error("No AnnData object found. Please complete **Preprocessing** first.")
     st.stop()
 
 adata = st.session_state["adata"]

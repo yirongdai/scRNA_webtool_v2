@@ -3,6 +3,8 @@ import scanpy as sc
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import io
+
 
 st.title("🧭 Gene Expression and Cell Type Annotation")
 
@@ -19,7 +21,7 @@ The workflow includes:
 
 # --- Check if adata exists from Step 6 ---
 if "adata" not in st.session_state:
-    st.error("No AnnData object found. Please complete Step 6 first.")
+    st.error("No AnnData object found. Please complete **DEGs** first.")
     st.stop()
 
 adata = st.session_state["adata"]
@@ -280,3 +282,90 @@ try:
 
 except ImportError:
     st.error("CellTypist is not installed. Please run: `pip install celltypist`")
+
+# =========================================================
+# 📊 Step 4: Visualize marker expression by cell types
+# =========================================================
+st.subheader("📌 Step 4: Visualize marker expression by cell types")
+
+# --- Check dependency ---
+if "adata" not in st.session_state or "predicted_labels" not in st.session_state["adata"].obs:
+    st.error("❌ Please complete Step 3 (CellTypist annotation) before visualizing.")
+    st.stop()
+
+adata = st.session_state["adata"]
+
+# --- Marker gene source ---
+marker_source = st.radio(
+    "Choose marker gene source:",
+    ["Custom selection", "Top 1 per cluster from DEGs"],
+    index=0
+)
+
+if marker_source == "Custom selection":
+    # --- Marker gene suggestions ---
+    st.info("""
+    💡 **Tip:** Try common PBMC marker genes:  
+    - **CST3** → monocytes/dendritic cells  
+    - **NKG7** → NK / cytotoxic T cells  
+    - **MS4A1** → B cells  
+    - **CD3D** → T cells  
+    - **PPBP** → Platelets  
+    """)
+
+    # Default markers
+    default_markers = ["CST3", "NKG7", "MS4A1", "CD3D", "PPBP"]
+
+    marker_genes = st.multiselect(
+        "Select marker genes to plot:",
+        options=adata.var_names.tolist(),
+        default=[g for g in default_markers if g in adata.var_names]
+    )
+else:
+    if "top_markers" in st.session_state:
+        marker_genes = list(st.session_state["top_markers"].values())
+        st.success(f"✅ Using top marker genes from DEGs: {marker_genes}")
+        st.info("ℹ️ If you want to use **top 1 gene from all clusters**, please go to **DEGs** → "
+                "**Step 1: Choose comparison mode** and select **All clusters vs rest**, then run DE analysis.")
+    else:
+        st.error("❌ No top markers found. Please complete DEGs first.")
+        marker_genes = []
+
+
+st.markdown("""
+Now that we have **cell type annotations**, we can visualize marker genes across cell types.  
+Choose a visualization style below:
+- **Dotplot** → shows fraction of cells (dot size) and mean expression (color).  
+- **Stacked violin plot** → compact view of expression distributions across groups.  
+""")
+
+plot_type = st.radio(
+    "Choose plot type:",
+    ["Dotplot", "Stacked violin"],
+    index=0
+)
+
+if st.button("Generate plot"):
+    if len(marker_genes) == 0:
+        st.warning("⚠️ Please select at least one marker gene to plot.")
+    else:
+        buf = io.BytesIO()
+        if plot_type == "Dotplot":
+            sc.pl.dotplot(adata, marker_genes, groupby="predicted_labels", show=False)
+        else:
+            sc.pl.stacked_violin(adata, marker_genes, groupby="predicted_labels", show=False)
+        
+        fig = plt.gcf()
+        st.pyplot(fig)
+
+
+        # --- Save plot ---
+        fig.savefig(buf, format="png", dpi=300, bbox_inches="tight")
+        st.download_button(
+            label="💾 Download plot (.png)",
+            data=buf.getvalue(),
+            file_name=f"{plot_type}_marker_expression.png",
+            mime="image/png"
+        )
+        buf.close()
+        plt.close(fig)

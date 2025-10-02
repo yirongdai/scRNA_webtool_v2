@@ -2,6 +2,7 @@ import streamlit as st
 import scanpy as sc
 import matplotlib.pyplot as plt
 import pandas as pd
+import io
 
 st.title("🧬 Differential Expression (Marker Genes)")
 
@@ -23,14 +24,61 @@ The workflow includes:
 
 # --- Check if adata exists from Step 5 ---
 if "adata" not in st.session_state:
-    st.error("No AnnData object found. Please complete Step 5 (Clustering & UMAP) first.")
+    st.error("No AnnData object found. Please complete **Clustering & UMAP** first.")
     st.stop()
 
 adata = st.session_state["adata"]
 
 if "leiden" not in adata.obs:
-    st.error("No clustering found. Please run Step 5 first.")
+    st.error("No clustering found. Please run **Clustering & UMAP** first.")
     st.stop()
+
+# # =========================================================
+# # --- Step 1: Select comparison mode ---
+# # =========================================================
+# st.subheader("📌 Step 1: Choose comparison mode")
+
+# mode = st.radio(
+#     "How would you like to compare clusters?",
+#     ["Cluster vs all other clusters", "Cluster vs cluster"],
+#     help="""
+#     **Cluster vs all other clusters** 🧩  
+#     - Identifies marker genes that are uniquely upregulated in one cluster compared to **all remaining cells**.  
+#     - Highlights *cluster-specific* features, making it more suitable for **cell type annotation**.  
+#     - Example: One cluster shows high expression of *MS4A1* → likely B cells.  
+#     - Best for answering: *“What cell type does this cluster represent?”*  
+
+#     **Cluster vs cluster** ⚖️  
+#     - Performs differential expression between **two selected clusters**.  
+#     - Highlights *relative differences*, making it more suitable for **subcluster comparison or functional studies**.  
+#     - Example: Comparing two T cell subsets to see which genes distinguish them.  
+#     - Best for answering: *“How are these two clusters different?”*  
+
+#     👉 Recommendation:  
+#     - Use *Cluster vs all others* for **cell type identification**.  
+#     - Use *Cluster vs cluster* for **subpopulation comparison and functional insights**.
+#     """
+# )
+
+# clusters = sorted(adata.obs["leiden"].unique())
+# run_deg = False
+# cluster = None
+# cluster1 = None
+# cluster2 = None
+
+# if mode == "Cluster vs all other clusters":
+#     cluster = st.selectbox("Select cluster:", clusters)
+#     if st.button("Run DE analysis"):
+#         run_deg = True
+
+# elif mode == "Cluster vs cluster":
+#     col1, col2 = st.columns(2)
+#     with col1:
+#         cluster1 = st.selectbox("Cluster 1:", clusters, index=0)
+#     with col2:
+#         cluster2 = st.selectbox("Cluster 2:", clusters, index=1)
+#     if st.button("Run DE analysis"):
+#         run_deg = True
 
 # =========================================================
 # --- Step 1: Select comparison mode ---
@@ -39,23 +87,11 @@ st.subheader("📌 Step 1: Choose comparison mode")
 
 mode = st.radio(
     "How would you like to compare clusters?",
-    ["Cluster vs all other clusters", "Cluster vs cluster"],
+    ["Cluster vs all other clusters", "Cluster vs cluster", "All clusters vs rest"],
     help="""
-    **Cluster vs all other clusters** 🧩  
-    - Identifies marker genes that are uniquely upregulated in one cluster compared to **all remaining cells**.  
-    - Highlights *cluster-specific* features, making it more suitable for **cell type annotation**.  
-    - Example: One cluster shows high expression of *MS4A1* → likely B cells.  
-    - Best for answering: *“What cell type does this cluster represent?”*  
-
-    **Cluster vs cluster** ⚖️  
-    - Performs differential expression between **two selected clusters**.  
-    - Highlights *relative differences*, making it more suitable for **subcluster comparison or functional studies**.  
-    - Example: Comparing two T cell subsets to see which genes distinguish them.  
-    - Best for answering: *“How are these two clusters different?”*  
-
-    👉 Recommendation:  
-    - Use *Cluster vs all others* for **cell type identification**.  
-    - Use *Cluster vs cluster* for **subpopulation comparison and functional insights**.
+    - **Cluster vs all other clusters** 🧩: Choose one cluster and compare against all others.  
+    - **Cluster vs cluster** ⚖️: Compare two specific clusters.  
+    - **All clusters vs rest** 🌐: Automatically compute marker genes for *all clusters* at once.  
     """
 )
 
@@ -78,6 +114,41 @@ elif mode == "Cluster vs cluster":
         cluster2 = st.selectbox("Cluster 2:", clusters, index=1)
     if st.button("Run DE analysis"):
         run_deg = True
+
+elif mode == "All clusters vs rest":
+    if st.button("Run DE analysis for all clusters"):
+        run_deg = True
+
+
+# # =========================================================
+# # --- Step 2: Run DE analysis ---
+# # =========================================================
+# if run_deg:
+#     wait_msg = st.empty()
+#     wait_msg.info("⏳ Running differential expression analysis...")
+
+#     if mode == "Cluster vs all other clusters":
+#         sc.tl.rank_genes_groups(
+#             adata,
+#             groupby="leiden",
+#             groups=[cluster],
+#             reference="rest",
+#             method="wilcoxon"
+#         )
+#         st.success(f"✅ Marker genes for cluster {cluster} vs all others computed.")
+
+#     elif mode == "Cluster vs cluster":
+#         sc.tl.rank_genes_groups(
+#             adata,
+#             groupby="leiden",
+#             groups=[cluster1],
+#             reference=cluster2,
+#             method="wilcoxon"
+#         )
+#         st.success(f"✅ Marker genes for cluster {cluster1} vs cluster {cluster2} computed.")
+
+#     wait_msg.empty()
+#     st.session_state["adata"] = adata
 
 # =========================================================
 # --- Step 2: Run DE analysis ---
@@ -106,11 +177,21 @@ if run_deg:
         )
         st.success(f"✅ Marker genes for cluster {cluster1} vs cluster {cluster2} computed.")
 
+    elif mode == "All clusters vs rest":
+        sc.tl.rank_genes_groups(
+            adata,
+            groupby="leiden",
+            reference="rest",
+            method="wilcoxon"
+        )
+        st.success("✅ Marker genes computed for ALL clusters vs rest.")
+
     wait_msg.empty()
     st.session_state["adata"] = adata
 
+
 # =========================================================
-# --- Step 3: Show results ---
+# --- Step 2 conti.: Show results ---
 # =========================================================
 if "rank_genes_groups" in adata.uns:
     st.subheader("📊 Step 2: Inspect marker genes")
@@ -144,104 +225,57 @@ if "rank_genes_groups" in adata.uns:
         mime="text/csv"
     )
 
-# # =========================================================
-# # --- Step 4: Explore marker genes with violin plots ---
-# # =========================================================
-# st.subheader("🎻 Step 3: Explore marker genes with violin plots")
+# =========================================================
+# --- Step 3: Automatically detect marker genes ---
+# =========================================================
+if "rank_genes_groups" in adata.uns:
+    st.subheader("✨ Step 3: Automatic Marker Gene Detection")
 
-# st.markdown("""
-# Violin plots show the **distribution of expression levels** of selected genes across clusters:  
-# - The **width** of the violin = number of cells at that expression level.  
-# - The **height** = range of expression.  
-# - This allows you to compare how a gene is expressed in different clusters.  
+    result = adata.uns["rank_genes_groups"]
+    groups = result["names"].dtype.names
 
-# 👉 Useful for verifying whether a marker gene truly separates specific cell populations.
-# """)
+    # Collect top N marker genes per cluster
+    top_n = st.number_input("Number of top genes per cluster", min_value=1, max_value=50, value=5, step=1)
 
-# # 提示框，提供推荐 marker genes
-# st.info("""
-# 💡 **Tip:** Try common marker genes in PBMC data:
-# - **CST3** → dendritic cell / monocyte marker  
-# - **NKG7** → NK cell / cytotoxic T cell marker  
-# - **PPBP** → Platelet marker 
-# - **MS4A1** → B cell marker  
-# - **CD3D** → T cell marker  
- 
-# """)
+    marker_dict = {}
+    for g in groups:
+        marker_dict[g] = result["names"][g][:top_n].tolist()
 
-# # Default marker list
-# marker_genes = ["CST3", "NKG7", "PPBP"]
+    # Convert to DataFrame for display
+    marker_table = []
+    for cluster, genes in marker_dict.items():
+        marker_table.append({
+            "Cluster": cluster,
+            "Markers": ", ".join(genes)
+        })
+    df_markers = pd.DataFrame(marker_table)
 
-# # Select genes
-# violin_genes = st.multiselect(
-#     "Select one or more genes for violin plot:",
-#     options=adata.var_names.tolist(),
-#     default=marker_genes,
-#     help="Choose genes to visualize expression distributions across clusters."
-# )
+    st.dataframe(df_markers)
 
+    # Save marker gene list
+    st.download_button(
+        label="💾 Download marker genes (.csv)",
+        data=df_markers.to_csv(index=False).encode("utf-8"),
+        file_name="marker_genes.csv",
+        mime="text/csv"
+    )
 
-# if st.button("Plot violin plots"):
-#     for gene in violin_genes:
-#         st.subheader(f"Violin plot: {gene}")
-#         sc.pl.violin(
-#             adata,
-#             keys=gene,
-#             groupby="leiden",
-#             show=False
-#         )
-#         fig = plt.gcf()
-#         st.pyplot(fig)
-#         plt.close(fig)
+    st.info("💡 These top marker genes are extracted from the DE results automatically. You can use them for cell type annotation in the next step.")
 
 
-    # # =========================================================
-    # # --- Step 4: Visualize marker genes on UMAP ---
-    # # =========================================================
-    # st.subheader("🗺️ Step 3: Visualize marker genes on UMAP")
+# --- Save top marker per cluster ---
+if "rank_genes_groups" in adata.uns:
+    result = adata.uns["rank_genes_groups"]
+    groups = result["names"].dtype.names
+    
+    top_markers = {}
+    for g in groups:
+        if len(result["names"][g]) > 0:
+            top_markers[g] = result["names"][g][0]  # take top 1 per cluster
+    
+    st.session_state["top_markers"] = top_markers
+    st.info(f"💡 Saved top marker genes per cluster: {list(top_markers.values())}")
 
-    # st.markdown("""
-    # You can plot expression of selected genes on the UMAP embedding.  
-    # - **Dark cells** → low expression  
-    # - **Bright cells** → high expression  
-
-    # 👉 This helps connect clusters to **cell types**.
-    # """)
-
-    # # 🔹 提示框
-    # st.info("""
-    # 💡 **Tip:** Marker genes are genes whose expression highlights specific cell types.  
-    # Here are some commonly used marker genes in PBMC data:
-
-    # - **CST3** → dendritic cell / monocyte marker  
-    # - **NKG7** → NK cell / cytotoxic T cell marker  
-    # - **MS4A1** → B cell marker  
-    # - **CD3D** → T cell marker  
-    # - **PPBP** → Platelet marker  
-    # """)
-
-    # # Simplified default PBMC marker list
-    # marker_genes = [
-    #     "CST3",   # dendritic cell / monocyte marker
-    #     "NKG7",   # NK cell / cytotoxic T cell marker
-    #     "MS4A1",  # B cell marker
-    #     "CD3D",   # T cell marker
-    #     "PPBP"    # Platelet marker
-    # ]
-
-
-    # selected_genes = st.multiselect(
-    #     "Select marker genes to visualize on UMAP:",
-    #     options=adata.var_names.tolist(),
-    #     default=marker_genes,
-    #     help="Choose one or more genes to display on UMAP."
-    # )
-
-    # if st.button("Plot selected marker genes"):
-    #     sc.pl.umap(adata, color=selected_genes, show=False)
-    #     fig = plt.gcf()
-    #     st.pyplot(fig)
-    #     plt.close(fig)
 
 # --- Show "Next" link only after DE is done ---
     st.markdown("""
@@ -253,6 +287,6 @@ if "rank_genes_groups" in adata.uns:
     </style>
     """, unsafe_allow_html=True)
 
-    spacer, right = st.columns([0.5, 0.255], gap="small")
+    spacer, right = st.columns([0.6, 0.255], gap="small")
     with right:
         st.page_link("pages/6_Assign_Cell_Type_Identity.py", label="➡️ Next: Assign Cell Identity")
