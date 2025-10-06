@@ -33,52 +33,6 @@ if "leiden" not in adata.obs:
     st.error("No clustering found. Please run **Clustering & UMAP** first.")
     st.stop()
 
-# # =========================================================
-# # --- Step 1: Select comparison mode ---
-# # =========================================================
-# st.subheader("📌 Step 1: Choose comparison mode")
-
-# mode = st.radio(
-#     "How would you like to compare clusters?",
-#     ["Cluster vs all other clusters", "Cluster vs cluster"],
-#     help="""
-#     **Cluster vs all other clusters** 🧩  
-#     - Identifies marker genes that are uniquely upregulated in one cluster compared to **all remaining cells**.  
-#     - Highlights *cluster-specific* features, making it more suitable for **cell type annotation**.  
-#     - Example: One cluster shows high expression of *MS4A1* → likely B cells.  
-#     - Best for answering: *“What cell type does this cluster represent?”*  
-
-#     **Cluster vs cluster** ⚖️  
-#     - Performs differential expression between **two selected clusters**.  
-#     - Highlights *relative differences*, making it more suitable for **subcluster comparison or functional studies**.  
-#     - Example: Comparing two T cell subsets to see which genes distinguish them.  
-#     - Best for answering: *“How are these two clusters different?”*  
-
-#     👉 Recommendation:  
-#     - Use *Cluster vs all others* for **cell type identification**.  
-#     - Use *Cluster vs cluster* for **subpopulation comparison and functional insights**.
-#     """
-# )
-
-# clusters = sorted(adata.obs["leiden"].unique())
-# run_deg = False
-# cluster = None
-# cluster1 = None
-# cluster2 = None
-
-# if mode == "Cluster vs all other clusters":
-#     cluster = st.selectbox("Select cluster:", clusters)
-#     if st.button("Run DE analysis"):
-#         run_deg = True
-
-# elif mode == "Cluster vs cluster":
-#     col1, col2 = st.columns(2)
-#     with col1:
-#         cluster1 = st.selectbox("Cluster 1:", clusters, index=0)
-#     with col2:
-#         cluster2 = st.selectbox("Cluster 2:", clusters, index=1)
-#     if st.button("Run DE analysis"):
-#         run_deg = True
 
 # =========================================================
 # --- Step 1: Select comparison mode ---
@@ -119,36 +73,6 @@ elif mode == "All clusters vs rest":
     if st.button("Run DE analysis for all clusters"):
         run_deg = True
 
-
-# # =========================================================
-# # --- Step 2: Run DE analysis ---
-# # =========================================================
-# if run_deg:
-#     wait_msg = st.empty()
-#     wait_msg.info("⏳ Running differential expression analysis...")
-
-#     if mode == "Cluster vs all other clusters":
-#         sc.tl.rank_genes_groups(
-#             adata,
-#             groupby="leiden",
-#             groups=[cluster],
-#             reference="rest",
-#             method="wilcoxon"
-#         )
-#         st.success(f"✅ Marker genes for cluster {cluster} vs all others computed.")
-
-#     elif mode == "Cluster vs cluster":
-#         sc.tl.rank_genes_groups(
-#             adata,
-#             groupby="leiden",
-#             groups=[cluster1],
-#             reference=cluster2,
-#             method="wilcoxon"
-#         )
-#         st.success(f"✅ Marker genes for cluster {cluster1} vs cluster {cluster2} computed.")
-
-#     wait_msg.empty()
-#     st.session_state["adata"] = adata
 
 # =========================================================
 # --- Step 2: Run DE analysis ---

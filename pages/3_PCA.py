@@ -70,24 +70,6 @@ if st.button("Run PCA"):
     wait_placeholder.empty()
 
 
-# # --- Check if adata exists ---
-# if "adata" not in st.session_state:
-#     st.error("No AnnData object found. Please complete preprocessing first.")
-#     st.stop()
-
-# adata = st.session_state["adata"]
-
-# # --- Run PCA ---
-# if st.button("Run PCA"):
-#     wait_placeholder = st.empty()
-#     wait_placeholder.info("⏳ Running PCA...")
-
-#     sc.tl.pca(adata, svd_solver="arpack")
-
-#     st.success("✅ PCA computed and stored in AnnData.")
-#     st.session_state["adata"] = adata
-#     wait_placeholder.empty()
-
 # --- If PCA done, show plots ---
 if "X_pca" in adata.obsm_keys():
     # ---- Elbow plot ----
@@ -141,35 +123,7 @@ if "X_pca" in adata.obsm_keys():
                     - Dark = low or no expression  
                     - Bright = high expression  
                 """)
-    
-    # Choose marker genes
-    # st.info("""
-    # 💡 **Tip:** Marker genes are genes whose expression highlights specific cell types.  
-    # Here are some commonly used marker genes in PBMC data:
-    # - **CST3** → dendritic cell / monocyte marker  
-    # - **NKG7** → NK cell / cytotoxic T cell marker  
-    # - **MS4A1** → B cell marker  
-    # - **CD3D** → T cell marker  
-    # - **PPBP** → Platelet marker 
-    # - **CCR7** → Naive T cell marker  
-    # """)
-
-    # x_pc = st.number_input("PC for X-axis", min_value=1, max_value=50, value=1, step=1)
-    # y_pc = st.number_input("PC for Y-axis", min_value=1, max_value=50, value=2, step=1)
-
-    # color_gene = st.text_input("Color cells by gene (optional)", value="")
-
-    # if st.button("Plot PCA Scatter"):
-    #     sc.pl.pca(
-    #         adata,
-    #         components=f"{x_pc},{y_pc}",
-    #         color=color_gene if color_gene else None,
-    #         show=False
-    #     )
-    #     fig = plt.gcf()
-    #     st.pyplot(fig)
-    #     plt.close(fig)
-    # 🔹 提示框
+   
     
     st.info("""
     💡 **Tip:** Marker genes are genes whose expression highlights specific cell types.  
@@ -178,13 +132,13 @@ if "X_pca" in adata.obsm_keys():
     - **CST3** → dendritic cell / monocyte marker  
     - **NKG7** → NK cell / cytotoxic T cell marker  
     - **MS4A1** → B cell marker  
-    - **CD3D** → T cell marker  
-    - **PPBP** → Platelet marker
-    - **CCR7** → Naive T cell marker 
+    - **CD3D** → T cells  
+    - **PPBP** → Platelets  
+    - **S100A4** → CD4 memory T cells
     """)
 
     # Choosing marker genes
-    marker_genes = ["CST3", "NKG7", "MS4A1", "CD3D", "PPBP", "CCR7"]
+    marker_genes = ["CST3", "NKG7", "MS4A1", "CD3D", "PPBP", "S100A4"]
 
     # Input number of PCs
     x_pc = st.number_input("PC for X-axis", min_value=1, max_value=50, value=1, step=1)
